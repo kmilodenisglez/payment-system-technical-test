@@ -30,6 +30,7 @@ export const UserResponse = Type.Object({
   name: Type.String(),
   email: Type.String(),
   createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
 });
 
 export const ErrorResponse = Type.Object({

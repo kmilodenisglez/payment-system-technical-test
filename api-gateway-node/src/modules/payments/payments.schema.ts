@@ -11,6 +11,12 @@ export const CreatePaymentBody = Type.Object(
       description: 'Payment amount (must be greater than zero)',
       examples: [120.5],
     }),
+    currency: Type.Optional(Type.String({
+      minLength: 3,
+      maxLength: 3,
+      description: 'ISO 4217 currency code',
+      examples: ['USD', 'EUR', 'COP'],
+    })),
   },
   { additionalProperties: false },
 );
@@ -26,10 +32,12 @@ export const PaymentResponse = Type.Object({
   userId: Type.String({ format: 'uuid' }),
   cardId: Type.String({ format: 'uuid' }),
   amount: Type.Number(),
-  status: Type.String({ description: "'approved' or 'rejected'" }),
+  currency: Type.String({ description: 'ISO 4217 currency code' }),
+  status: Type.String({ description: 'PENDING | APPROVED | REJECTED | FAILED' }),
   transactionId: Type.Union([Type.String(), Type.Null()]),
   bankMessage: Type.Union([Type.String(), Type.Null()]),
   createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
 });
 
 export const ErrorResponse = Type.Object({
