@@ -1,2 +1,7 @@
-# No third-party dependencies — the Python standard library is sufficient.
-# Leave this file in place so Docker and pip install steps remain consistent.
+# Production dependencies: none (Python standard library only)
+
+# Development/Testing dependencies (optional)
+# Install with: pip install -r requirements-dev.txt
+#
+# pytest==7.4.0
+# pytest-cov==4.1.0
