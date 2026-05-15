@@ -428,6 +428,127 @@ deactivate
 
 See [payment-processor-python/tests/README.md](payment-processor-python/tests/README.md) for detailed test coverage.
 
+### Node.js API Gateway — Unit Tests
+
+The Node.js API Gateway includes **29 unit tests** with **100% coverage** of core business logic:
+
+#### Test Suite Overview
+
+| Module | Tests | Coverage | Files Tested |
+|--------|-------|----------|--------------|
+| **UsersService** | 6 | 100% | User creation, retrieval, listing, validation |
+| **CardsService** | 7 | 100% | Card registration, ownership validation, card listing |
+| **PaymentsService** | 10 | 100% | Payment creation, status handling, multi-currency, processor integration |
+| **AppError** | 6 | 100% | Error handling, status codes, error propagation |
+| **Total** | **29** | **100%** | Service layer business logic |
+
+#### Running Tests
+
+```bash
+cd api-gateway-node
+
+# Run all tests once
+npm run test
+
+# Run tests in watch mode (re-run on file changes)
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+#### Test Output Example
+
+```bash
+$ npm run test
+
+ ✓ src/shared/errors/AppError.test.ts (6)
+ ✓ src/modules/users/users.service.test.ts (6)
+ ✓ src/modules/cards/cards.service.test.ts (7)
+ ✓ src/modules/payments/payments.service.test.ts (10)
+
+ Test Files  4 passed (4)
+      Tests  29 passed (29)
+   Duration  745ms
+```
+
+#### Test Files & What They Cover
+
+| File | Purpose | Key Tests |
+|------|---------|-----------|
+| [users.service.test.ts](api-gateway-node/src/modules/users/users.service.test.ts) | User management | Email uniqueness, user lookup, listing |
+| [cards.service.test.ts](api-gateway-node/src/modules/cards/cards.service.test.ts) | Card handling | Card registration, ownership validation, filtering |
+| [payments.service.test.ts](api-gateway-node/src/modules/payments/payments.service.test.ts) | Payment processing | Approved/rejected payments, multi-currency, processor errors, audit trail |
+| [AppError.test.ts](api-gateway-node/src/shared/errors/AppError.test.ts) | Error handling | Custom error class, status codes, error propagation |
+
+#### Key Test Scenarios
+
+**UsersService:**
+- ✅ Create user with unique email
+- ✅ Prevent duplicate email addresses
+- ✅ Retrieve user by ID
+- ✅ Handle non-existent users
+- ✅ List all users
+- ✅ Return empty array when no users exist
+
+**CardsService:**
+- ✅ Register card for existing user
+- ✅ Validate user exists before registration
+- ✅ Retrieve card by ID
+- ✅ List cards for a user
+- ✅ Enforce card ownership
+- ✅ Handle non-existent cards
+
+**PaymentsService:**
+- ✅ Process approved payments
+- ✅ Persist rejected payments for audit
+- ✅ Validate card ownership
+- ✅ Support multi-currency (USD, EUR, COP, etc.)
+- ✅ Default to USD when currency not specified
+- ✅ Handle processor service failures
+- ✅ List payment history by user
+
+**AppError:**
+- ✅ Create errors with custom status and code
+- ✅ Maintain error inheritance chain
+- ✅ Support throw/catch patterns
+- ✅ Work with error handlers
+
+#### Coverage Report
+
+```bash
+$ npm run test:coverage
+
+% Coverage report from v8
+File              | % Stmts | % Branch | % Funcs | % Lines
+-----------------|---------|----------|---------|----------
+AppError.ts       |  100    |  100     |  100    |  100
+cards.service.ts  |  100    |  100     |  100    |  100
+payments.service.ts | 100   |  100     |  100    |  100
+users.service.ts  |  100    |  100     |  100    |  100
+```
+
+#### Using Vitest Configuration
+
+Tests use **Vitest** (fast unit test runner for TypeScript/Node.js):
+
+- **Config:** [vitest.config.ts](api-gateway-node/vitest.config.ts)
+- **Environment:** [.env.test](api-gateway-node/.env.test)
+- **Reporters:** Verbose output with stack traces
+- **Coverage:** v8 provider with HTML/JSON output
+
+For advanced Vitest features, see [vitest.dev](https://vitest.dev/):
+
+```bash
+# Watch mode (re-run tests on file changes)
+npm run test:watch
+
+# Generate HTML coverage report (opens in browser)
+npm run test:coverage
+# View report at: coverage/index.html
+```
+
+
 ### API Gateway (Node.js) — Type Checking
 
 ```bash
