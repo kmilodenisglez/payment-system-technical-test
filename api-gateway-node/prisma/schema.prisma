@@ -1,0 +1,63 @@
+// This is your Prisma schema file.
+// Learn more: https://www.prisma.io/docs/orm/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @db.VarChar(100)
+  email     String    @unique @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  cards    Card[]
+  payments Payment[]
+
+  @@map("users")
+}
+
+// ─── Cards ────────────────────────────────────────────────────────────────────
+// PCI-DSS note: we NEVER store the real card number (PAN).
+// Only the last 4 digits and a randomly generated fake_token are persisted.
+
+model Card {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  holderName String   @map("holder_name") @db.VarChar(120)
+  last4      String   @map("last4") @db.Char(4)
+  brand      String   @db.VarChar(50)
+  fakeToken  String   @unique @map("fake_token") @db.VarChar(100)
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id])
+  payments Payment[]
+
+  @@map("cards")
+}
+
+// ─── Payments ─────────────────────────────────────────────────────────────────
+
+model Payment {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  cardId        String   @map("card_id") @db.Uuid
+  amount        Decimal  @db.Decimal(10, 2)
+  status        String   @db.VarChar(20) // 'approved' | 'rejected'
+  transactionId String?  @map("transaction_id") @db.VarChar(100)
+  bankMessage   String?  @map("bank_message") @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+  card Card @relation(fields: [cardId], references: [id])
+
+  @@map("payments")
+}
