@@ -29,15 +29,16 @@ export class UsersService {
 
   async listUsers(): Promise<UserResponseType[]> {
     const users = await this.repo.findAll();
-    return users.map((u: { id: string; name: string; email: string; createdAt: Date; }) => this.toDTO(u));
+    return users.map((u: { id: string; name: string; email: string; createdAt: Date; updatedAt: Date }) => this.toDTO(u));
   }
 
-  private toDTO(user: { id: string; name: string; email: string; createdAt: Date }): UserResponseType {
+  private toDTO(user: { id: string; name: string; email: string; createdAt: Date; updatedAt: Date }): UserResponseType {
     return {
       id: user.id,
       name: user.name,
       email: user.email,
       createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
   }
 }

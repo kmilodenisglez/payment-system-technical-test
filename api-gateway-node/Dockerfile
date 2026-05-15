@@ -30,4 +30,4 @@ COPY api-gateway-node/prisma ./prisma
 EXPOSE 3000
 
 # db push creates/updates tables on every cold start; safe for demos.
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/server.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && node dist/server.js"]

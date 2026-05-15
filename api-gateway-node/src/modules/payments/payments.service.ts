@@ -4,6 +4,7 @@ import { UsersRepository } from '../users/users.repository';
 import { CardsRepository } from '../cards/cards.repository';
 import { PaymentsRepository } from './payments.repository';
 import { CreatePaymentBodyType, PaymentResponseType } from './payments.schema';
+import { PaymentStatus } from '@prisma/client';
 
 /**
  * Business-logic layer for payments.
@@ -54,7 +55,8 @@ export class PaymentsService {
       userId: data.userId,
       cardId: data.cardId,
       amount: data.amount,
-      status: processorResult.approved ? 'approved' : 'rejected',
+      currency: data.currency || 'USD',
+      status: processorResult.approved ? PaymentStatus.APPROVED : PaymentStatus.REJECTED,
       transactionId: processorResult.transaction_id,
       bankMessage: processorResult.message,
     });
@@ -77,20 +79,24 @@ export class PaymentsService {
     userId: string;
     cardId: string;
     amount: number;
-    status: string;
+    currency: string;
+    status: PaymentStatus;
     transactionId: string | null;
     bankMessage: string | null;
     createdAt: Date;
+    updatedAt: Date;
   }): PaymentResponseType {
     return {
       id: payment.id,
       userId: payment.userId,
       cardId: payment.cardId,
       amount: payment.amount,
+      currency: payment.currency,
       status: payment.status,
       transactionId: payment.transactionId,
       bankMessage: payment.bankMessage,
       createdAt: payment.createdAt.toISOString(),
+      updatedAt: payment.updatedAt.toISOString(),
     };
   }
 }
