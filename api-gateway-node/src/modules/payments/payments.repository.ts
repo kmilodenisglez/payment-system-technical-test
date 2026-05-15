@@ -33,6 +33,6 @@ export class PaymentsRepository {
       orderBy: { createdAt: 'desc' },
     });
 
-    return payments.map((p) => ({ ...p, amount: p.amount.toNumber() }));
+    return payments.map((p: { amount: { toNumber: () => any; }; }) => ({ ...p, amount: p.amount.toNumber() }));
   }
 }
