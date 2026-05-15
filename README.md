@@ -274,6 +274,43 @@ The collection includes automatic test scripts:
 
 ---
 
+## Enhanced Security & Audit Features
+
+### PaymentStatus Enum
+- Strict type safety: `PENDING` | `APPROVED` | `REJECTED` | `FAILED`
+- Enforced at database level (PostgreSQL enum type)
+- Prevents invalid state values
+
+### Multi-Currency Support
+- ISO 4217 standard (USD, EUR, COP, etc.)
+- Default: USD
+- Track exact currency with each transaction
+
+### Audit Trail
+- `createdAt` — timestamp when record created
+- `updatedAt` — timestamp of last modification
+- Automatic timestamps via Prisma `@updatedAt`
+- Enables compliance reporting
+
+### Referential Integrity
+- `onDelete: Restrict` prevents deletion of users/cards with payments
+- Protects transaction history from accidental removal
+- Ensures financial audit trails remain intact
+
+### Performance Indexes
+Strategic indexes for fast queries:
+- `(userId, createdAt)` — user payment history
+- `transactionId` — duplicate prevention (idempotency)
+- `status` — payment status reporting
+- `email` — user lookup during authentication
+
+### Financial Precision
+- `Decimal(12, 2)` storage (up to 9,999,999.99)
+- Supports high-inflation currencies
+- Node.js: Always use `Decimal.js` for monetary values (never raw floats)
+
+---
+
 ## Best Practices Demonstrated
 
 | Practice | Implementation |
@@ -288,8 +325,13 @@ The collection includes automatic test scripts:
 | Concurrency Safety | Python uses `ThreadingTCPServer` to handle parallel requests |
 | Environment Config | All secrets in `.env`, validated at startup |
 | UUID Primary Keys | More secure than sequential integer IDs |
-| Audit Trail | Every payment (approved or rejected) is persisted |
+| Audit Trail | Every payment logged with createdAt + updatedAt timestamps |
 | API Documentation | OpenAPI 3.0 via Swagger UI |
+| **Type Safety (Enums)** | **PaymentStatus enforced at DB level (PostgreSQL enum)** |
+| **Multi-Currency** | **ISO 4217 standard; track exact currency per transaction** |
+| **Referential Integrity** | **`onDelete: Restrict` protects transaction history** |
+| **Financial Precision** | **Decimal(12, 2) with Decimal.js in code** |
+| **Performance Indexes** | **Strategic DB indexes for fast queries** |
 
 ---
 
@@ -402,21 +444,275 @@ npm run build
 
 ## Development Commands
 
-```bash
-# Node.js (run from api-gateway-node/)
-npm run dev          # start with hot reload
-npm run build        # compile TypeScript → dist/
-npm run type-check   # validate types without emitting
-npm run lint         # ESLint
-npm run db:push      # sync Prisma schema → DB
-npm run db:seed      # insert demo data
-npm run db:studio    # open Prisma Studio (DB browser)
+### 🚀 Start/Stop Services
 
-# Python (run from payment-processor-python/)
+```bash
+# Start all services in background (recommended)
+docker compose up --build -d
+
+# View logs
+docker compose logs -f api-gateway      # API Gateway
+docker compose logs -f payment-processor # Python Service
+docker compose logs -f postgres          # Database
+
+# Stop and clean all services
+docker compose down                      # Keep data
+docker compose down -v                   # Delete all data
+
+# Restart specific service
+docker compose restart api-gateway
+```
+
+### 📝 Node.js API Gateway (`cd api-gateway-node/`)
+
+#### Development
+```bash
+# Start dev server with hot reload
+npm run dev
+
+# Type checking
+npm run type-check   # Check types without building
+npm run build        # Compile TypeScript → dist/
+
+# Linting (if configured)
+npm run lint
+```
+
+#### Database Management
+```bash
+# Sync Prisma schema with database
+npm run db:push              # Apply schema changes
+npm run db:push --force-reset # Reset database (DANGER: deletes data)
+
+# Insert demo seed data
+npm run db:seed
+
+# Open Prisma Studio (GUI for database)
+npm run db:studio
+
+# View migration status
+npx prisma migrate status
+```
+
+#### Type Generation
+```bash
+# Regenerate Prisma Client (after schema changes)
+npx prisma generate
+
+# Also runs on: npm install, npm run db:push
+```
+
+### 🐍 Python Payment Processor (`cd payment-processor-python/`)
+
+#### Development
+```bash
+# Start payment processor (requires Python 3.12+)
 python3 src/server.py
 
-# Testing
-cd payment-processor-python && ./scripts/run_tests.sh  # run all tests
+# With asdf (auto-detects correct Python version)
+python src/server.py
+```
+
+#### Virtual Environment Setup
+```bash
+# Automated setup (recommended)
+./scripts/setup_env.sh
+
+# Manual setup
+python -m venv .venv
+source .venv/bin/activate      # Linux/macOS
+# OR
+.venv\Scripts\activate.bat     # Windows
+
+# Install dependencies
+pip install -r requirements-dev.txt
+```
+
+#### Testing
+```bash
+# Run all tests
+./scripts/run_tests.sh
+
+# Run specific test
+./scripts/run_tests.sh -k test_process_payment_approved
+
+# Fast mode (stop at first failure)
+./scripts/run_tests.sh --fast
+
+# With coverage report
+./scripts/run_tests.sh --cov
+
+# Deactivate virtual environment
+deactivate
+```
+
+### 🧪 API Testing (curl/Postman)
+
+#### Basic Health Checks
+```bash
+# API Gateway health
+curl http://localhost:3000/health | jq
+
+# Payment Processor health
+curl http://localhost:5000/health | jq
+
+# Both services running?
+docker compose ps
+```
+
+#### Create User
+```bash
+USER=$(curl -s -X POST http://localhost:3000/api/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Alice Johnson",
+    "email": "alice@example.com"
+  }' | jq -r '.id')
+
+echo "Created user: $USER"
+```
+
+#### List Users
+```bash
+curl -s http://localhost:3000/api/v1/users | jq
+```
+
+#### Register Card
+```bash
+USER_ID="<paste-user-id>"
+CARD=$(curl -s -X POST http://localhost:3000/api/v1/cards \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"userId\": \"$USER_ID\",
+    \"holderName\": \"Alice Johnson\",
+    \"last4\": \"4242\",
+    \"brand\": \"Visa\",
+    \"fakeToken\": \"tok_visa_$(date +%s)\",
+    \"expiresAt\": \"2027-12-31T23:59:59Z\"
+  }" | jq -r '.id')
+
+echo "Created card: $CARD"
+```
+
+#### Process Payment (USD)
+```bash
+USER_ID="<paste-user-id>"
+CARD_ID="<paste-card-id>"
+
+PAYMENT=$(curl -s -X POST http://localhost:3000/api/v1/payments \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"userId\": \"$USER_ID\",
+    \"cardId\": \"$CARD_ID\",
+    \"amount\": 99.99,
+    \"currency\": \"USD\"
+  }")
+
+echo "$PAYMENT" | jq '{id, amount, currency, status, transactionId}'
+```
+
+#### Process Payment (Alternative Currency)
+```bash
+# EUR or COP or any ISO 4217 code
+curl -s -X POST http://localhost:3000/api/v1/payments \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"userId\": \"$USER_ID\",
+    \"cardId\": \"$CARD_ID\",
+    \"amount\": 50.00,
+    \"currency\": \"EUR\"
+  }" | jq
+```
+
+#### Get Payment History
+```bash
+USER_ID="<paste-user-id>"
+
+curl -s "http://localhost:3000/api/v1/payments?userId=$USER_ID" | jq '.[] | {id, amount, currency, status, createdAt, updatedAt}'
+```
+
+#### Get User Cards
+```bash
+USER_ID="<paste-user-id>"
+
+curl -s "http://localhost:3000/api/v1/cards?userId=$USER_ID" | jq
+```
+
+### 📊 Monitoring & Debugging
+
+#### View API Logs
+```bash
+# Real-time logs (follow mode)
+docker compose logs -f api-gateway
+
+# Last 50 lines
+docker compose logs api-gateway | tail -50
+
+# Search for errors
+docker compose logs api-gateway | grep -i error
+```
+
+#### Database Inspection
+```bash
+# Open Prisma Studio
+cd api-gateway-node && npm run db:studio
+
+# Or connect directly with psql
+psql -h localhost -U payment_user -d payment_db -c "SELECT * FROM payments LIMIT 5;"
+```
+
+#### Performance Monitoring
+```bash
+# Watch Docker resource usage
+docker stats
+
+# Check API response times
+time curl http://localhost:3000/api/v1/users
+```
+
+### 🔄 Common Development Workflows
+
+#### Full Reset (Start Fresh)
+```bash
+# 1. Stop all services
+docker compose down -v
+
+# 2. Rebuild and start
+docker compose up --build
+
+# 3. Verify services are healthy
+docker compose ps
+```
+
+#### Update Database Schema
+```bash
+# 1. Edit: api-gateway-node/prisma/schema.prisma
+# 2. Apply changes
+cd api-gateway-node
+npm run db:push
+
+# 3. Regenerate types
+npx prisma generate
+
+# 4. Rebuild API
+npm run build
+```
+
+#### Run Python Tests in Container
+```bash
+docker compose exec payment-processor bash -c "cd /app && ./scripts/run_tests.sh"
+```
+
+#### Seed Database with Demo Data
+```bash
+cd api-gateway-node
+npm run db:seed
+```
+
+#### View Database Schema
+```bash
+cd api-gateway-node
+npm run db:studio
 ```
 
 ---
