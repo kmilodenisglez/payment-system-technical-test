@@ -1,0 +1,2 @@
+# No third-party dependencies — the Python standard library is sufficient.
+# Leave this file in place so Docker and pip install steps remain consistent.
