@@ -84,30 +84,67 @@ if [ "${PYTHON_MAJOR}" -lt 3 ] || ([ "${PYTHON_MAJOR}" -eq 3 ] && [ "${PYTHON_MI
     echo ""
 fi
 
+# Function: Install venv module based on OS
+install_venv_module() {
+    echo -e "${YELLOW}Installing venv module...${NC}"
+    
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Ubuntu/Debian/Linux
+        if command -v apt-get &> /dev/null; then
+            echo -e "${BLUE}Detected: Ubuntu/Debian (using apt-get)${NC}"
+            sudo apt-get update -qq 2>/dev/null || true
+            sudo apt-get install -y python3-venv python3-dev 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}✓ venv module installed${NC}"
+                return 0
+            fi
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        if command -v brew &> /dev/null; then
+            echo -e "${BLUE}Detected: macOS (using Homebrew)${NC}"
+            brew install python@3.12 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}✓ Python installed${NC}"
+                return 0
+            fi
+        fi
+    fi
+    
+    return 1
+}
+
 # Create virtual environment
 if [ ! -d "${VENV_DIR}" ]; then
     echo -e "${BLUE}Creating virtual environment...${NC}"
+    
+    # Try to create venv
     if ${PYTHON_CMD} -m venv "${VENV_DIR}" 2>/dev/null; then
         echo -e "${GREEN}✓ Virtual environment created${NC}"
     else
-        echo -e "${RED}✗ Failed to create virtual environment${NC}"
-        echo ""
-        echo "This is usually because venv support is missing. Try:"
-        echo ""
-        echo -e "${YELLOW}Option 1: Using asdf (recommended)${NC}"
-        echo "  asdf install python 3.12.0"
-        echo "  asdf local python 3.12.0"
-        echo "  ./scripts/setup_env.sh"
-        echo ""
-        echo -e "${YELLOW}Option 2: Ubuntu/Debian${NC}"
-        echo "  sudo apt-get install python3-venv"
-        echo "  ./scripts/setup_env.sh"
-        echo ""
-        echo -e "${YELLOW}Option 3: macOS with Homebrew${NC}"
-        echo "  brew install python@3.12"
-        echo "  /usr/local/opt/python@3.12/libexec/bin/python -m venv .venv"
-        echo ""
-        exit 1
+        # If failed, try to install venv module
+        echo -e "${YELLOW}venv module not available, installing...${NC}"
+        if install_venv_module; then
+            # Try again after installing
+            if ${PYTHON_CMD} -m venv "${VENV_DIR}" 2>/dev/null; then
+                echo -e "${GREEN}✓ Virtual environment created${NC}"
+            else
+                echo -e "${RED}✗ Failed to create virtual environment${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${RED}✗ Could not install venv module automatically${NC}"
+            echo ""
+            echo "Please install manually and try again:"
+            echo ""
+            echo -e "${YELLOW}Ubuntu/Debian:${NC}"
+            echo "  sudo apt-get install python3-venv"
+            echo ""
+            echo -e "${YELLOW}macOS:${NC}"
+            echo "  brew install python@3.12"
+            echo ""
+            exit 1
+        fi
     fi
 else
     echo -e "${YELLOW}✓ Virtual environment already exists${NC}"
