@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Payment System API",
-    "description": "Complete test suite for the Payment System API Gateway.\n\n**Flow:**\n1. Create a user → saves `userId` automatically\n2. Register a card → saves `cardId` automatically\n3. Create a payment → calls the Python processor (80% approved)\n4. Check payment history\n\n**Base URL:** `http://localhost:3000`",
+    "description": "Complete test suite for the Payment System API Gateway with Security & Audit Features.\n\n**Features:**\n- PaymentStatus Enum (PENDING | APPROVED | REJECTED | FAILED)\n- Multi-Currency Support (ISO 4217: USD, EUR, COP, etc.)\n- Audit Trail (createdAt + updatedAt timestamps)\n- Referential Integrity Constraints\n- Financial Precision (Decimal(12,2))\n\n**Flow:**\n1. Create a user → saves `userId` automatically\n2. Register a card → saves `cardId` automatically\n3. Create a payment (with optional currency) → calls the Python processor (80% approved)\n4. Check payment history\n\n**Base URL:** `http://localhost:3000`\n**Status Values:** PENDING, APPROVED, REJECTED, FAILED",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -96,6 +96,7 @@
                   "  pm.collectionVariables.set('cardId', body.id);",
                   "  pm.test('Card registered', () => pm.response.to.have.status(201));",
                   "  pm.test('Has fakeToken', () => pm.expect(body.fakeToken).to.match(/^tok_/));",
+                  "  pm.test('Has createdAt', () => pm.expect(body.createdAt).to.be.a('string'));",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -154,8 +155,20 @@
                 "exec": [
                   "pm.test('Payment created', () => pm.response.to.have.status(201));",
                   "const body = pm.response.json();",
-                  "pm.test('Status is approved or rejected', () => {",
-                  "  pm.expect(['approved', 'rejected']).to.include(body.status);",
+                  "pm.test('Has required fields', () => {",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('status');",
+                  "  pm.expect(body).to.have.property('amount');",
+                  "  pm.expect(body).to.have.property('currency');",
+                  "  pm.expect(body).to.have.property('createdAt');",
+                  "  pm.expect(body).to.have.property('updatedAt');",
+                  "});",
+                  "pm.test('Status is valid enum', () => {",
+                  "  const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'FAILED'];",
+                  "  pm.expect(validStatuses).to.include(body.status);",
+                  "});",
+                  "pm.test('Currency is 3-letter code', () => {",
+                  "  pm.expect(body.currency).to.match(/^[A-Z]{3}$/);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -167,7 +180,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"amount\": 120.50\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"amount\": 120.50,\n  \"currency\": \"USD\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"] }
           },
@@ -184,6 +197,58 @@
               "path": ["api", "v1", "payments"],
               "query": [{ "key": "userId", "value": "{{userId}}" }]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Payment (EUR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Payment created with EUR', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Currency is EUR', () => pm.expect(body.currency).to.equal('EUR'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"amount\": 99.99,\n  \"currency\": \"EUR\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Payment (COP)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Payment created with COP', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Currency is COP', () => pm.expect(body.currency).to.equal('COP'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"amount\": 50000.00,\n  \"currency\": \"COP\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"] }
           },
           "response": []
         }
@@ -219,6 +284,19 @@
           "response": []
         },
         {
+          "name": "Create Payment — Card Ownership Error (403)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"00000000-0000-0000-0000-000000000000\",\n  \"cardId\": \"{{cardId}}\",\n  \"amount\": 50.00\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"] }
+          },
+          "response": []
+        },
+        {
           "name": "Get User — Not Found (404)",
           "request": {
             "method": "GET",
@@ -230,8 +308,35 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Create Card — User Not Found (404)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"00000000-0000-0000-0000-000000000000\",\n  \"holderName\": \"Ghost User\",\n  \"last4\": \"1111\",\n  \"brand\": \"Visa\",\n  \"expiresAt\": \"2027-12-31\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/cards", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cards"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Payment — Processor Unavailable (502)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"amount\": 50.00\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"] }
+          },
+          "response": []
         }
       ]
     }
   ]
 }
+
