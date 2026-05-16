@@ -31,7 +31,34 @@ A classroom-ready payment system demonstrating clean architecture, service colla
 
 ---
 
+## Table of Contents
+
+1. [Tech Stack](#tech-stack)
+2. [Project Structure](#project-structure)
+3. [Quick Start (Docker Compose)](#quick-start--docker-compose-recommended)
+4. [Manual Setup](#manual-setup-without-docker)
+5. [API Endpoints](#api-endpoints)
+6. [Postman Collection](#postman-collection)
+7. [Environment Variables](#environment-variables)
+8. [Security & Audit Features](#enhanced-security--audit-features)
+9. [Best Practices](#best-practices-demonstrated)
+10. [Testing](#testing)
+    - [Python Unit Tests](#payment-processor-python--unit-tests)
+    - [Node.js Unit Tests](#nodejs-api-gateway--unit-tests)
+    - [API Type Checking](#api-gateway-nodejs--type-checking)
+11. [Development Commands](#development-commands)
+    - [Start/Stop Services](#-startstop-services)
+    - [Node.js API Gateway](#-nodejs-api-gateway-cd-api-gateway-node)
+    - [Python Processor](#-python-payment-processor-cd-payment-processor-python)
+    - [API Testing](#-api-testing-curlpostman)
+    - [Monitoring & Debugging](#-monitoring--debugging)
+    - [Common Workflows](#-common-development-workflows)
+12. [Stopping Services](#stopping-docker-services)
+
+---
+
 ## Tech Stack
+
 
 | Layer            | Technology                                    |
 |------------------|-----------------------------------------------|
